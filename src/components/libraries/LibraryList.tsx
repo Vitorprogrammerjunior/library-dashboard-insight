@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Edit, Trash2, BookOpen, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,20 +22,44 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { getLibraries, deleteLibrary, getBookCountByLibrary } from "@/data/index";
+import { getLibraries, deleteLibrary, getBookCountByLibrary } from "@/api";
 import { Library } from "@/types";
 import LibraryForm from "./LibraryForm";
 
 const LibraryList: React.FC = () => {
-  const [libraries, setLibraries] = useState<Library[]>(getLibraries());
+  const [libraries, setLibraries] = useState<Library[]>([]);
+  const [bookCounts, setBookCounts] = useState<{ [key: number]: number }>({});
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLibrary, setSelectedLibrary] = useState<Library | null>(null);
   const navigate = useNavigate();
 
-  const handleDelete = (id: string) => {
-    deleteLibrary(id);
-    setLibraries(getLibraries());
-    toast.success("Biblioteca removida com sucesso!");
+  const fetchLibraries = async () => {
+    try {
+      const data = await getLibraries();
+      setLibraries(data);
+
+      // Para cada biblioteca, buscar contagem de livros
+      const counts: { [key: number]: number } = {};
+      await Promise.all(
+        data.map(async (lib) => {
+          const count = await getBookCountByLibrary(Number(lib.id));
+          counts[Number(lib.id)] = count;
+        })
+      );
+      setBookCounts(counts);
+    } catch (error) {
+      toast.error("Erro ao carregar bibliotecas");
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteLibrary(id);
+      toast.success("Biblioteca removida com sucesso!");
+      fetchLibraries(); // Atualiza lista após exclusão
+    } catch (error) {
+      toast.error("Erro ao remover biblioteca");
+    }
   };
 
   const handleEditClick = (library: Library) => {
@@ -47,16 +70,20 @@ const LibraryList: React.FC = () => {
   const handleFormClose = () => {
     setIsFormOpen(false);
     setSelectedLibrary(null);
-    setLibraries(getLibraries());
+    fetchLibraries(); // Atualiza lista após criação/edição
   };
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("pt-BR");
   };
   
-  const handleViewBooks = (libraryId: string) => {
+  const handleViewBooks = (libraryId: number) => {
     navigate(`/libraries/${libraryId}/books`);
   };
+
+  useEffect(() => {
+    fetchLibraries();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -94,13 +121,13 @@ const LibraryList: React.FC = () => {
               <TableRow key={library.id}>
                 <TableCell className="font-medium">{library.name}</TableCell>
                 <TableCell>{formatDate(library.createdAt)}</TableCell>
-                <TableCell>{getBookCountByLibrary(library.id)}</TableCell>
+                <TableCell>{bookCounts[library.id] ?? "..."}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => handleViewBooks(library.id)}
+                      onClick={() => handleViewBooks(Number(library.id))}
                       title="Ver Livros"
                     >
                       <BookOpen className="h-4 w-4" />
@@ -135,7 +162,7 @@ const LibraryList: React.FC = () => {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => handleDelete(library.id)}
+                            onClick={() => handleDelete(Number(library.id))}
                             className="bg-red-500 hover:bg-red-700"
                           >
                             Excluir

@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createLibrary, updateLibrary } from "@/data/index";
+import { createLibrary, updateLibrary } from "@/api";
 import { Library } from "@/types";
 
 interface LibraryFormProps {
@@ -32,36 +32,39 @@ const LibraryForm: React.FC<LibraryFormProps> = ({ isOpen, onClose, library }) =
     }
   }, [library, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    try {
-      if (name.trim() === "") {
-        toast.error("O nome da biblioteca é obrigatório");
-        return;
-      }
-
-      if (library) {
-        // Update existing library
-        updateLibrary({
-          ...library,
-          name,
-        });
-        toast.success("Biblioteca atualizada com sucesso!");
-      } else {
-        // Create new library
-        createLibrary(name);
-        toast.success("Biblioteca criada com sucesso!");
-      }
-      onClose();
-    } catch (error) {
-      toast.error("Ocorreu um erro ao salvar a biblioteca");
-      console.error(error);
-    } finally {
-      setIsSubmitting(false);
+  try {
+    if (name.trim() === "") {
+      toast.error("O nome da biblioteca é obrigatório");
+      return;
     }
-  };
+
+    if (library) {
+      // Atualizar biblioteca existente
+      await updateLibrary({
+        id: Number(library.id),
+        name,
+      });
+      
+      toast.success("Biblioteca atualizada com sucesso!");
+    } else {
+      // Criar nova biblioteca
+      await createLibrary(name);
+      toast.success("Biblioteca criada com sucesso!");
+    }
+
+    onClose();
+  } catch (error) {
+    toast.error("Ocorreu um erro ao salvar a biblioteca");
+    console.error(error);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

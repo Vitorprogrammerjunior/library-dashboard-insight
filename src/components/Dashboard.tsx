@@ -1,23 +1,64 @@
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getLibraries, getBooks, getBookCountByLibrary } from "@/data/index";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Book, Library as LibraryIcon } from "lucide-react";
+import { fetchLibraries, fetchBooks, fetchBookCountByLibrary } from "@/api";
+
+interface Library {
+  id: number;
+  nome: string;
+  data_criacao: string;
+}
+
+interface Book {
+  id: number;
+  nome: string;
+  autor: string;
+  data_criacao: string;
+  biblioteca_id: number;
+}
 
 const Dashboard: React.FC = () => {
-  const libraries = getLibraries();
-  const books = getBooks();
-  
-  const chartData = libraries.map(library => ({
-    name: library.name,
-    Livros: getBookCountByLibrary(library.id)
-  }));
+  const [libraries, setLibraries] = useState<Library[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const libs = await fetchLibraries();
+        const bks = await fetchBooks();
+
+        const chart = await Promise.all(
+          libs.map(async (lib: Library) => {
+            const count = await fetchBookCountByLibrary(lib.id);
+            return {
+              name: lib.nome,
+              Livros: count,
+            };
+          })
+        );
+
+        setLibraries(libs);
+        setBooks(bks);
+        setChartData(chart);
+      } catch (error) {
+        console.error("Erro ao buscar dados:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  if (loading) return <p className="text-center text-xl mt-10">Carregando...</p>;
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -29,7 +70,7 @@ const Dashboard: React.FC = () => {
             <p className="text-xs text-gray-500">Total de Bibliotecas Cadastradas</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Livros</CardTitle>
@@ -40,7 +81,7 @@ const Dashboard: React.FC = () => {
             <p className="text-xs text-gray-500">Total de Livros Cadastrados</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Média</CardTitle>
@@ -54,7 +95,7 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       <Card className="col-span-3">
         <CardHeader>
           <CardTitle>Distribuição de Livros por Biblioteca</CardTitle>
