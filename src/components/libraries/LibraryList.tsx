@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Edit, Trash2, BookOpen, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,43 +22,46 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { getLibraries, deleteLibrary, getBookCountByLibrary } from "@/api";
+import {
+  fetchLibraries,
+  deleteLibrary,
+  fetchBookCountByLibrary,
+} from "@/api";
 import { Library } from "@/types";
 import LibraryForm from "./LibraryForm";
 
 const LibraryList: React.FC = () => {
   const [libraries, setLibraries] = useState<Library[]>([]);
-  const [bookCounts, setBookCounts] = useState<{ [key: number]: number }>({});
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLibrary, setSelectedLibrary] = useState<Library | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const fetchLibraries = async () => {
+  const loadLibraries = async () => {
     try {
-      const data = await getLibraries();
+      setLoading(true);
+      const data = await fetchLibraries();
       setLibraries(data);
-
-      // Para cada biblioteca, buscar contagem de livros
-      const counts: { [key: number]: number } = {};
-      await Promise.all(
-        data.map(async (lib) => {
-          const count = await getBookCountByLibrary(Number(lib.id));
-          counts[Number(lib.id)] = count;
-        })
-      );
-      setBookCounts(counts);
     } catch (error) {
+      console.error("Erro ao carregar bibliotecas:", error);
       toast.error("Erro ao carregar bibliotecas");
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadLibraries();
+  }, []);
 
   const handleDelete = async (id: number) => {
     try {
       await deleteLibrary(id);
+      loadLibraries();
       toast.success("Biblioteca removida com sucesso!");
-      fetchLibraries(); // Atualiza lista após exclusão
     } catch (error) {
-      toast.error("Erro ao remover biblioteca");
+      console.error("Erro ao excluir biblioteca:", error);
+      toast.error("Erro ao excluir biblioteca");
     }
   };
 
@@ -70,25 +73,19 @@ const LibraryList: React.FC = () => {
   const handleFormClose = () => {
     setIsFormOpen(false);
     setSelectedLibrary(null);
-    fetchLibraries(); // Atualiza lista após criação/edição
+    loadLibraries();
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("pt-BR");
-  };
-  
   const handleViewBooks = (libraryId: number) => {
     navigate(`/libraries/${libraryId}/books`);
   };
 
-  useEffect(() => {
-    fetchLibraries();
-  }, []);
+  if (loading) return <p className="text-center text-xl mt-10">Carregando bibliotecas...</p>;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Bibliotecas</h1>
+        <h1 className="text-3xl font-bold">Bibliotecas</h1>
         <Button onClick={() => setIsFormOpen(true)} className="bg-purple-700 hover:bg-purple-800">
           <Plus className="mr-2 h-4 w-4" />
           Nova Biblioteca
@@ -97,7 +94,7 @@ const LibraryList: React.FC = () => {
 
       {libraries.length === 0 ? (
         <div className="text-center py-10">
-          <p className="text-gray-500">Nenhuma biblioteca cadastrada.</p>
+          <p className="text-muted-foreground">Nenhuma biblioteca cadastrada.</p>
           <Button 
             onClick={() => setIsFormOpen(true)} 
             variant="outline" 
@@ -119,15 +116,17 @@ const LibraryList: React.FC = () => {
           <TableBody>
             {libraries.map((library) => (
               <TableRow key={library.id}>
-                <TableCell className="font-medium">{library.name}</TableCell>
-                <TableCell>{formatDate(library.createdAt)}</TableCell>
-                <TableCell>{bookCounts[library.id] ?? "..."}</TableCell>
+                <TableCell className="font-medium">{library.nome}</TableCell>
+                <TableCell>{new Date(library.data_criacao).getFullYear()}</TableCell>
+                <TableCell>
+                  <BookCount libraryId={library.id} />
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => handleViewBooks(Number(library.id))}
+                      onClick={() => handleViewBooks(library.id)}
                       title="Ver Livros"
                     >
                       <BookOpen className="h-4 w-4" />
@@ -155,14 +154,14 @@ const LibraryList: React.FC = () => {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tem certeza que deseja excluir "{library.name}"? 
+                            Tem certeza que deseja excluir "{library.nome}"? 
                             Esta ação não pode ser desfeita e também excluirá todos os livros associados.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => handleDelete(Number(library.id))}
+                            onClick={() => handleDelete(library.id)}
                             className="bg-red-500 hover:bg-red-700"
                           >
                             Excluir
@@ -185,6 +184,27 @@ const LibraryList: React.FC = () => {
       />
     </div>
   );
+};
+
+const BookCount: React.FC<{ libraryId: number }> = ({ libraryId }) => {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const getCount = async () => {
+      try {
+        const bookCount = await fetchBookCountByLibrary(libraryId);
+        setCount(bookCount);
+      } catch (error) {
+        console.error(`Erro ao buscar contagem de livros para biblioteca ${libraryId}:`, error);
+        setCount(0);
+      }
+    };
+
+    getCount();
+  }, [libraryId]);
+
+  if (count === null) return <span>...</span>;
+  return <span>{count}</span>;
 };
 
 export default LibraryList;

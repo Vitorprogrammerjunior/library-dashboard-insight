@@ -1,13 +1,13 @@
-
 export interface Library {
-  id: string;
-  name: string;
-  createdAt: Date;
+  id: number;
+  nome: string;
+  data_criacao: number;
 }
 
 export interface Book {
-  id: string;
-  libraryId: string;
-  name: string;
-  createdAt: Date;
+  id: number;
+  nome: string;
+  autor: string;
+  data_criacao: number;
+  biblioteca_id: number;
 }

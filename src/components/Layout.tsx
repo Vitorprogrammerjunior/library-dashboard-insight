@@ -15,7 +15,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <main className="container mx-auto">
           {children}
         </main>
-        <Toaster position="top-right" />
+        
+    
       </div>
     </div>
   );

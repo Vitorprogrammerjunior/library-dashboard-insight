@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
@@ -11,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createBook, updateBook } from "@/data/index";
+import { createBook, updateBook } from "@/api";
 import { Book } from "@/types";
 
 interface BookFormProps {
@@ -22,42 +21,84 @@ interface BookFormProps {
 }
 
 const BookForm: React.FC<BookFormProps> = ({ isOpen, onClose, book, libraryId }) => {
-  const [name, setName] = useState("");
+  const [titulo, setTitulo] = useState("");
+  const [autor, setAutor] = useState("");
+  const [anoPublicacao, setAnoPublicacao] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (book) {
-      setName(book.name);
-    } else {
-      setName("");
+    if (isOpen) {
+      if (book) {
+        setTitulo(book.nome || "");
+        setAutor(book.autor || "");
+        setAnoPublicacao(book.data_criacao?.toString() || "");
+      } else {
+        setTitulo("");
+        setAutor("");
+        setAnoPublicacao("");
+      }
     }
-  }, [book, isOpen]);
+  }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  
+
+  
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
+  
+    if (titulo.trim() === "") {
+      toast.error("O título do livro é obrigatório");
+      setIsSubmitting(false);
+      return;
+    }
+  
     try {
-      if (name.trim() === "") {
-        toast.error("O nome do livro é obrigatório");
+      if (book) {
+        const ano = parseInt(anoPublicacao);
+        if (isNaN(ano)) {
+          toast.error("Ano de publicação inválido");
+          setIsSubmitting(false);
+          return;
+        }
+
+          await updateBook({
+            ...book,
+            titulo,
+            autor,
+            ano_publicacao: ano,
+          });
+      
+          toast.success("Livro atualizado com sucesso!");
+      } else {
+
+              const ano = parseInt(anoPublicacao);
+      if (isNaN(ano)) {
+        toast.error("Ano de publicação inválido");
+        setIsSubmitting(false);
         return;
       }
 
-      if (book) {
-        // Update existing book
-        updateBook({
-          ...book,
-          name,
+      const bibliotecaId = parseInt(libraryId);
+      if (isNaN(bibliotecaId)) {
+        toast.error("ID da biblioteca inválido");
+        setIsSubmitting(false);
+        return;
+      }
+
+        await createBook({
+          titulo,
+          autor,
+          ano_publicacao: ano,
+          biblioteca_id: parseInt(libraryId),
         });
-        toast.success("Livro atualizado com sucesso!");
-      } else {
-        // Create new book
-        createBook(libraryId, name);
         toast.success("Livro criado com sucesso!");
       }
+  
       onClose();
     } catch (error) {
-      toast.error("Ocorreu um erro ao salvar o livro");
+      toast.error("Erro ao salvar livro");
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -65,22 +106,41 @@ const BookForm: React.FC<BookFormProps> = ({ isOpen, onClose, book, libraryId })
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) onClose();
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {book ? "Editar Livro" : "Novo Livro"}
-          </DialogTitle>
+          <DialogTitle>{book ? "Editar Livro" : "Novo Livro"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do Livro</Label>
+            <Label htmlFor="titulo">Título</Label>
             <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Digite o nome do livro"
+              id="titulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Digite o título do livro"
               autoFocus
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="autor">Autor</Label>
+            <Input
+              id="autor"
+              value={autor}
+              onChange={(e) => setAutor(e.target.value)}
+              placeholder="Digite o autor"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ano">Ano de Publicação</Label>
+            <Input
+              id="ano"
+              type="number"
+              value={anoPublicacao}
+              onChange={(e) => setAnoPublicacao(e.target.value)}
+              placeholder="Ex: 2020"
             />
           </div>
           <DialogFooter>

@@ -1,26 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Book, Library as LibraryIcon } from "lucide-react";
+import { Book, LibraryIcon } from "lucide-react";
 import { fetchLibraries, fetchBooks, fetchBookCountByLibrary } from "@/api";
-
-interface Library {
-  id: number;
-  nome: string;
-  data_criacao: string;
-}
-
-interface Book {
-  id: number;
-  nome: string;
-  autor: string;
-  data_criacao: string;
-  biblioteca_id: number;
-}
+import { Library, Book as BookType } from "@/types";import { toast } from "@/hooks/use-toast";
 
 const Dashboard: React.FC = () => {
   const [libraries, setLibraries] = useState<Library[]>([]);
-  const [books, setBooks] = useState<Book[]>([]);
+  const [books, setBooks] = useState<BookType[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +32,11 @@ const Dashboard: React.FC = () => {
         setChartData(chart);
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados. Verifique se o servidor está rodando.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -56,8 +48,8 @@ const Dashboard: React.FC = () => {
   if (loading) return <p className="text-center text-xl mt-10">Carregando...</p>;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+    <div className="container mx-auto py-8 space-y-6">
+      <h1 className="text-3xl font-bold">Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
@@ -67,7 +59,7 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{libraries.length}</div>
-            <p className="text-xs text-gray-500">Total de Bibliotecas Cadastradas</p>
+            <p className="text-xs text-muted-foreground">Total de Bibliotecas Cadastradas</p>
           </CardContent>
         </Card>
 
@@ -78,7 +70,7 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{books.length}</div>
-            <p className="text-xs text-gray-500">Total de Livros Cadastrados</p>
+            <p className="text-xs text-muted-foreground">Total de Livros Cadastrados</p>
           </CardContent>
         </Card>
 
@@ -91,7 +83,7 @@ const Dashboard: React.FC = () => {
             <div className="text-2xl font-bold">
               {libraries.length ? (books.length / libraries.length).toFixed(1) : "0"}
             </div>
-            <p className="text-xs text-gray-500">Média de Livros por Biblioteca</p>
+            <p className="text-xs text-muted-foreground">Média de Livros por Biblioteca</p>
           </CardContent>
         </Card>
       </div>
