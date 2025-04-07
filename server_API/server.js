@@ -13,8 +13,8 @@ app.use(cors());
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "", // Adicione a senha se houver
-  database: "biblioteca_db", // Corrigido o nome do banco
+  password: "", 
+  database: "biblioteca_db", 
 });
 
 db.connect((err) => {
@@ -43,7 +43,7 @@ app.post('/bibliotecas', (req, res) => {
     return res.status(400).json({ message: "Nome e data de criação são obrigatórios" });
   }
 
-  // Corrigir aqui também
+
   if (!String(data_criacao).includes('-')) {
     data_criacao = `${data_criacao}-01-01`;
   }
@@ -111,7 +111,7 @@ app.put('/bibliotecas/:id', (req, res) => {
     return res.status(400).json({ message: "Nome e data de criação são obrigatórios" });
   }
 
-  // Corrigir erro aqui
+  
   if (!String(data_criacao).includes('-')) {
     data_criacao = `${data_criacao}-01-01`;
   }
